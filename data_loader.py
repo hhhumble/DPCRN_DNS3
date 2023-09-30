@@ -15,8 +15,8 @@ from scipy import signal
 TRAIN_DIR: DNS data
 RIR_DIR: Room impulse response
 '''
-TRAIN_DIR = '/data/ssd1/xiaohuai.le/DNS_data1/DNS_data'
-RIR_DIR = '/data/ssd1/xiaohuai.le/RIR_database/impulse_responses/'
+TRAIN_DIR = 'E:\\Works\\PycharmProjects\\DPCRN_DNS3\\dataset'
+RIR_DIR = 'E:\\Works\\PycharmProjects\\DPCRN_DNS3\\data\\RIR_database\\impulse_responses\\'
 
 
 #FIR, frequencies below 60Hz will be filtered
@@ -37,7 +37,7 @@ def mk_mixture(s1,s2,snr,eps = 1e-8):
     '''
     make mixture from s1 and s2 with snr
     '''
-    norm_sig1 = s1 / np.sqrt(np.sum(s1 ** 2) + eps) 
+    norm_sig1 = s1 / np.sqrt(np.sum(s1 ** 2) + eps)
     norm_sig2 = s2 / np.sqrt(np.sum(s2 ** 2) + eps)
     alpha = 10**(snr/20)
     mix = norm_sig2 + alpha*norm_sig1
@@ -55,7 +55,7 @@ class data_generator():
                     RIR_dir = RIR_DIR,
                     validation_rate=0.1,
                     length_per_sample = 4,
-                    fs = 16000,
+                    fs = 8000,
                     n_fft = 400,
                     n_hop = 200,
                     batch_size = 8,
@@ -80,8 +80,8 @@ class data_generator():
         '''
         
         self.train_dir = train_dir
-        self.clean_dir = os.path.join(train_dir,'clean')
-        self.noise_dir = os.path.join(train_dir,'noise')
+        self.clean_dir = os.path.join(train_dir,'pre_real_signal')
+        self.noise_dir = os.path.join(train_dir,'pre_noisy_signal')
         
         self.fs = fs
         self.batch_size = batch_size 
@@ -102,7 +102,7 @@ class data_generator():
             print('there are {} rir clips\n'.format(len(self.rir_list)))
 
         self.noise_file_list = os.listdir(self.noise_dir)
-        self.clean_file_list = os.listdir(self.clean_dir)[:sample_num]
+        self.clean_file_list = os.listdir(self.clean_dir)
         self.train_length = int(len(self.clean_file_list)*(1-validation_rate))
         self.train_list, self.validation_list = self.generating_train_validation(self.train_length)
         self.valid_length = len(self.validation_list)
@@ -110,7 +110,7 @@ class data_generator():
         self.train_rir = self.rir_list[:self.train_length]
         self.valid_rir = self.rir_list[self.train_length : self.train_length + self.valid_length]
         print('have been generated DNS training list...\n')
-       
+
         print('there are {} samples for training, {} for validation'.format(self.train_length,self.valid_length))
 
     def find_files(self,file_name):
@@ -122,13 +122,15 @@ class data_generator():
         noisy_file_name: noisy_fileid_1.wav
         '''
         #noise_file_name = np.random.choice(self.noise_file_list) #randomly selection
-        _,k1,k2 = file_name.split('_')
-        noise_file_name = 'noise' + '_' + k1 + '_' + k2
-        noisy_file_name = 'noisy' + '_' + k1 + '_' + k2
-        
+        # _,k1,k2 = file_name.split('_')
+        # noise_file_name = 'noise' + '_' + k1 + '_' + k2
+        noise_file_name = file_name
+        # noisy_file_name = 'noisy' + '_' + k1 + '_' + k2
+        noisy_file_name = file_name
+
         # random segmentation
-        Begin_S = int(np.random.uniform(0,30 - self.length_per_sample)) * self.fs
-        Begin_N = int(np.random.uniform(0,30 - self.length_per_sample)) * self.fs
+        Begin_S = int(np.random.uniform(0,25 - self.length_per_sample)) * self.fs
+        Begin_N = int(np.random.uniform(0,25 - self.length_per_sample)) * self.fs
         return noise_file_name,noisy_file_name,Begin_S,Begin_N
      
     def generating_train_validation(self,training_length):
@@ -174,18 +176,19 @@ class data_generator():
 
                 noise_f, noisy_f, Begin_S,Begin_N = self.find_files(clean_f)
                 clean_s = sf.read(os.path.join(self.clean_dir,clean_f),dtype = 'float32',start= Begin_S,stop = Begin_S + self.points_per_sample)[0]
+
                 noise_s = sf.read(os.path.join(self.noise_dir,noise_f),dtype = 'float32',start= Begin_N,stop = Begin_N + self.points_per_sample)[0]
 
-                clean_s = add_pyreverb(clean_s, fir)
-                
-                #noise_s = noise_s - np.mean(noise_s)
-                if self.add_reverb:
-                    if reverb_rate < self.reverb_rate:
-                        rir_s = sf.read(rir_f,dtype = 'float32')[0]
-                        if len(rir_s.shape)>1:
-                            rir_s = rir_s[:,0]
-                        clean_s = add_pyreverb(clean_s, rir_s)
-                        
+                # clean_s = add_pyreverb(clean_s, fir)
+                #
+                # #noise_s = noise_s - np.mean(noise_s)
+                # if self.add_reverb:
+                #     if reverb_rate < self.reverb_rate:
+                #         rir_s = sf.read(rir_f,dtype = 'float32')[0]
+                #         if len(rir_s.shape)>1:
+                #             rir_s = rir_s[:,0]
+                #         clean_s = add_pyreverb(clean_s, rir_s)
+
                 clean_s,noise_s,noisy_s,_ = mk_mixture(clean_s,noise_s,SNR,eps = 1e-8)
 
                 batch_clean[i,:] = clean_s * gain

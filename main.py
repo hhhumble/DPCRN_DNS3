@@ -101,7 +101,7 @@ class DPCRN_model():
     
     def spectrum_loss(self,y_true):
         '''
-        spectrum MSE loss 
+        spectrum MSE loss
         '''
         enh_real = self.enh_real
         enh_imag = self.enh_imag
@@ -440,7 +440,7 @@ class DPCRN_model():
         return noisy_s,enh_s    
 
 if __name__ == '__main__':
-    
+
     import argparse
     parser = argparse.ArgumentParser(description='manual to this script')
     parser.add_argument("--cuda", type = int, default = 0, help = 'which GPU to use')
@@ -463,7 +463,7 @@ if __name__ == '__main__':
     
     if args.mode == 'train':
         dg = data_generator(train_dir = args.train_dir,
-                            RIR_dir = args.rir_dr,
+                            RIR_dir = args.rir_dir,
                             length_per_sample = args.second,
                             n_fft = args.win_length,
                             n_hop = args.hop_length)
@@ -474,7 +474,7 @@ if __name__ == '__main__':
                             block_len = args.win_length,
                             block_shift = args.hop_length)
         dpcrn.build_DPCRN_model()
-        dpcrn.train(runName = args.experimentName, data_generator = dg)
+        dpcrn.train_model(runName = args.experimentName, data_generator = dg)
         
     elif args.mode == 'test':
         # batch size = 1 in test
